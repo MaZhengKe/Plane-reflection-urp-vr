@@ -10,7 +10,8 @@ Shader "KM/Seascape"
         ITER_GEOMETRY("ITER_GEOMETRY",int) = 3
         ITER_FRAGMENT ("ITER_FRAGMENT",int) = 5
 
-        SEA_HEIGHT("海高度",range(0,1)) = 0.6
+        SEA_BaseHeight("海基础高度",range(-10,10)) = 0
+        SEA_HEIGHT("海浪高度",range(0,1)) = 0.6
         SEA_CHOPPY("海浪",range(0,10)) = 4.0
         SEA_SPEED("海浪速度",range(0,1)) = 0.8
         SEA_FREQ("海浪频率",range(0,0.5)) = 0.16
@@ -38,7 +39,7 @@ Shader "KM/Seascape"
 
             #define iGlobalTime   _Time.y
             #define iTime   _Time.y
-            
+
             #define EPSILON_NRM (0.1 / _ScreenParams.x)
             #define SEA_TIME (1.0 + iTime * SEA_SPEED)
 
@@ -52,6 +53,7 @@ Shader "KM/Seascape"
             int ITER_GEOMETRY = 3;
             int ITER_FRAGMENT = 5;
             float SEA_HEIGHT = 0.6;
+            float SEA_BaseHeight = 0.6;
             float SEA_CHOPPY = 4.0;
             float SEA_SPEED = 0.8;
             float SEA_FREQ = 0.16;
@@ -132,12 +134,13 @@ Shader "KM/Seascape"
                 float choppy = SEA_CHOPPY;
 
                 float2 uv = p.xz;
-                
 
-            float2x2 octave_m = float2x2(1.6, 1.2, -1.2, 1.6);
+
+                float2x2 octave_m = float2x2(1.6, 1.2, -1.2, 1.6);
                 // why
                 uv.x *= 0.75;
-                float d, h = 0.0;
+                float d = 0.0;
+                float h = SEA_BaseHeight;
                 for (int i = 0; i < ITER_GEOMETRY; i++)
                 {
                     d = sea_octave((uv + SEA_TIME) * freq, choppy);
@@ -158,14 +161,14 @@ Shader "KM/Seascape"
 
             float map_detailed(float3 p)
             {
-
-            float2x2 octave_m = float2x2(1.6, 1.2, -1.2, 1.6);
+                float2x2 octave_m = float2x2(1.6, 1.2, -1.2, 1.6);
                 float freq = SEA_FREQ;
                 float amp = SEA_HEIGHT;
                 float choppy = SEA_CHOPPY;
                 float2 uv = p.xz;
                 uv.x *= 0.75;
-                float d, h = 0.0;
+                float d = 0.0;
+                float h = SEA_BaseHeight;
                 for (int i = 0; i < ITER_FRAGMENT; i++)
                 {
                     d = sea_octave((uv + SEA_TIME) * freq, choppy);
@@ -193,7 +196,7 @@ Shader "KM/Seascape"
                 // 距离衰减
                 float atten = max(1.0 - dot(dist, dist) * 0.001, 0.0);
 
-                color += SEA_WATER_COLOR * (p.y - SEA_HEIGHT) * 0.18 * atten;
+                color += SEA_WATER_COLOR * (p.y - SEA_HEIGHT - SEA_BaseHeight) * 0.18 * atten;
                 color += (specular(n, l, eye, 60.0));
                 return color;
             }
@@ -292,7 +295,7 @@ Shader "KM/Seascape"
                 }
 
                 // post
-                color = clamp(color,0,1);
+                color = clamp(color, 0, 1);
                 color = pow((color), 0.65);
                 return float4(color, 1.0);
             }
@@ -320,7 +323,7 @@ Shader "KM/Seascape"
                 //output.positionHCS = TransformObjectToHClip(input.positionOS);
 
                 output.positionHCS = float4(input.positionOS.xy, 0.5, 0.5);
-                    
+
                 output.uv = input.uv;
 
                 return output;

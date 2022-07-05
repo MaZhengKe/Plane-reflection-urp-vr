@@ -29,6 +29,7 @@ Material:
     - ITER_FRAGMENT: 5
     - ITER_GEOMETRY: 3
     - NUM_STEPS: 8
+    - SEA_BaseHeight: -2.92
     - SEA_CHOPPY: 4
     - SEA_FREQ: 0.16
     - SEA_HEIGHT: 0.6
