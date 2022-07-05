@@ -13,7 +13,7 @@ Shader "KuanMi/Mirror"
         Pass
         {
             name "MirrorPass"
-            blend one zero
+            blend one one
             ZWrite off
             ZTest Lequal
             Cull off

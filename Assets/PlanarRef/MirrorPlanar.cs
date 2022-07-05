@@ -33,13 +33,10 @@ namespace UnityTemplateProjects
 
         public static Vector3 mirrorPos(Transform plane, Vector3 oldPos)
         {
-            var forward = plane.forward;
-            var planPos = plane.position;
-            var dis = planPos - oldPos;
-            var cros = Vector3.Cross(dis, forward).normalized;
-            var ccos = Vector3.Cross(cros, forward);
-            var refDis = Vector3.Reflect(dis, ccos);
-            return refDis + planPos;
+            var normal = plane.forward;
+            var d = -Vector3.Dot(normal, plane.position);
+
+            return oldPos - 2 * (Vector3.Dot(oldPos, normal) + d) * normal;
         }
 
         public static void MirrorTran(Transform mirror, Transform org)
