@@ -28,12 +28,14 @@ Material:
     m_Floats:
     - ITER_FRAGMENT: 5
     - ITER_GEOMETRY: 3
-    - NUM_STEPS: 8
-    - SEA_BaseHeight: -0.01
+    - NUM_STEPS: 9
+    - SEA_BaseHeight: -0
     - SEA_CHOPPY: 4
-    - SEA_FREQ: 0.16
-    - SEA_HEIGHT: 0.152
+    - SEA_FREQ: 0.236
+    - SEA_HEIGHT: 0.186
     - SEA_SPEED: 0.8
+    - reflectedIndex: 1
+    - refractedIndex: 0.547
     m_Colors:
     - SEA_BASE: {r: 0, g: 0.089999996, b: 0.17999998, a: 1}
     - SEA_WATER_COLOR: {r: 0.47999996, g: 0.53999996, b: 0.35999998, a: 1}

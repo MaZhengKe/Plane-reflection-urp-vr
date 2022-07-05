@@ -15,6 +15,11 @@ Shader "KM/Seascape"
         SEA_CHOPPY("海浪",range(0,10)) = 4.0
         SEA_SPEED("海浪速度",range(0,1)) = 0.8
         SEA_FREQ("海浪频率",range(0,0.5)) = 0.16
+        
+        reflectedIndex("反射",range(0,1.0)) = 0.16
+        refractedIndex("折射",range(0,1.0)) = 0.16
+        
+        
 
         AA("AA",Integer) = 1
     }
@@ -47,6 +52,10 @@ Shader "KM/Seascape"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareOpaqueTexture.hlsl"
+
+            TEXTURE2D_X(_MirrorTex);
+            SAMPLER(sampler_MirrorTex);
 
             CBUFFER_START(UnityPerMaterial)
 
@@ -58,6 +67,8 @@ Shader "KM/Seascape"
             float SEA_CHOPPY = 4.0;
             float SEA_SPEED = 0.8;
             float SEA_FREQ = 0.16;
+            float reflectedIndex;
+            float refractedIndex;
             float3 SEA_BASE = float3(0.0, 0.09, 0.18);
             float3 SEA_WATER_COLOR = float3(0.8, 0.9, 0.6) * 0.6;
 
@@ -185,14 +196,18 @@ Shader "KM/Seascape"
                 return p.y - h;
             }
 
-            float3 getSeaColor(float3 p, float3 n, float3 l, float3 eye, float3 dist)
+            float3 getSeaColor(float3 p, float3 n, float3 l, float3 eye, float3 dist,float3 reflectedColor,float3 refractedColor,float depth)
             {
+                // return float3(clamp(1-depth,0,1),0,0);
                 float fresnel = clamp(1.0 - dot(n, -eye), 0.0, 1.0);
-                fresnel = pow(fresnel, 3.0) * 0.5;
+                fresnel = pow(fresnel, 3.0)*0.5 ;
                 float3 reflected = getSkyColor(reflect(eye, n));
-                float3 refraced = SEA_BASE + diffuse(n, l, 80.0) * SEA_WATER_COLOR * 0.12;
 
-                float3 color = lerp(refraced, reflected, fresnel);
+                reflected = reflectedColor* reflectedIndex;
+                float3 refracted = SEA_BASE + diffuse(n, l, 80.0) * SEA_WATER_COLOR * 0.12;
+                refracted += refractedColor * refractedIndex * clamp(1-depth,0,1);
+
+                float3 color = lerp(refracted, reflected, fresnel);
 
                 // 距离衰减
                 float atten = max(1.0 - dot(dist, dist) * 0.001, 0.0);
@@ -261,11 +276,6 @@ Shader "KM/Seascape"
                 float depth = SampleSceneDepth(uv);
 
                 float3 worldPos = ComputeWorldSpacePosition(uv, depth, UNITY_MATRIX_I_VP);
-
-
-
-                
-                float linearEyeDepth = LinearEyeDepth(depth,_ZBufferParams);
                 
                 // ray
 
@@ -291,26 +301,27 @@ Shader "KM/Seascape"
                 
                 dis = length(dist);
                 float depthLen = length(objDis);
-                //if(dot(dist, dist)>dot(objDis,objDis))
-                //if(worldPos.y>p.y)
+
                 if(depthLen<dis)
                 {    
-
                     clip(-1);
-
                 }                            
 
-
-                //return float3(linearEyeDepth,0,0);
-                //return float3(p.y - SEA_BaseHeight,0,0);
                 float3 n = getNormal(p, dot(dist, dist) * EPSILON_NRM);
+
+                float2 screenUV = uv;
+                //screenUV.y = 1 - screenUV.y;
+                screenUV.x = 1 - screenUV.x;
+                screenUV += n.xz * 0.1;
+                float3 refColor = SAMPLE_TEXTURE2D_X(_MirrorTex, sampler_MirrorTex, screenUV);
 
                 const float3 light_dir = GetMainLight().direction;
 
+                float3 sceneColor = SampleSceneColor(uv + n.xz * 0.05);
                 // color 以地平线来分割
                 return lerp(
                     getSkyColor(dir),
-                    getSeaColor(p, n, light_dir, dir, dist),
+                    getSeaColor(p, n, light_dir, dir, dist,refColor,sceneColor,depthLen - dis),
                     pow(smoothstep(0.0, -0.02, dir.y), 0.2));
             }
 
