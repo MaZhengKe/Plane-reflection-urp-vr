@@ -18,6 +18,7 @@ Shader "KM/Seascape"
         
         reflectedIndex("反射",range(0,1.0)) = 0.16
         refractedIndex("折射",range(0,1.0)) = 0.16
+        refractedMaxDepth("折射最大深度",range(0,3)) = 1
         
         
 
@@ -69,6 +70,7 @@ Shader "KM/Seascape"
             float SEA_FREQ = 0.16;
             float reflectedIndex;
             float refractedIndex;
+            float refractedMaxDepth;
             float3 SEA_BASE = float3(0.0, 0.09, 0.18);
             float3 SEA_WATER_COLOR = float3(0.8, 0.9, 0.6) * 0.6;
 
@@ -205,7 +207,7 @@ Shader "KM/Seascape"
 
                 reflected = reflectedColor* reflectedIndex;
                 float3 refracted = SEA_BASE + diffuse(n, l, 80.0) * SEA_WATER_COLOR * 0.12;
-                refracted += refractedColor * refractedIndex * clamp(1-depth,0,1);
+                refracted += refractedColor * refractedIndex * clamp((refractedMaxDepth-depth)/refractedMaxDepth,0,1);
 
                 float3 color = lerp(refracted, reflected, fresnel);
 

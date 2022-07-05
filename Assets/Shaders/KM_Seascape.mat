@@ -35,7 +35,8 @@ Material:
     - SEA_HEIGHT: 0.186
     - SEA_SPEED: 0.8
     - reflectedIndex: 1
-    - refractedIndex: 0.547
+    - refractedIndex: 0.26
+    - refractedMaxDepth: 1.85
     m_Colors:
     - SEA_BASE: {r: 0, g: 0.089999996, b: 0.17999998, a: 1}
     - SEA_WATER_COLOR: {r: 0.47999996, g: 0.53999996, b: 0.35999998, a: 1}
