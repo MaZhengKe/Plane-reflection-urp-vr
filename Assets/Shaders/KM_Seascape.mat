@@ -16,7 +16,7 @@ Material:
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
+  m_CustomRenderQueue: 3002
   stringTagMap: {}
   disabledShaderPasses: []
   m_LockedProperties: 
@@ -29,10 +29,10 @@ Material:
     - ITER_FRAGMENT: 5
     - ITER_GEOMETRY: 3
     - NUM_STEPS: 8
-    - SEA_BaseHeight: -2.92
+    - SEA_BaseHeight: -0.01
     - SEA_CHOPPY: 4
     - SEA_FREQ: 0.16
-    - SEA_HEIGHT: 0.6
+    - SEA_HEIGHT: 0.152
     - SEA_SPEED: 0.8
     m_Colors:
     - SEA_BASE: {r: 0, g: 0.089999996, b: 0.17999998, a: 1}

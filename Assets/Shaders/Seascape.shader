@@ -22,7 +22,7 @@ Shader "KM/Seascape"
     {
         Tags
         {
-            "RenderType"="Opaque" "RenderPeipeline" = "UniversalPepeline"
+            "RenderType"="Transparent" "RenderPeipeline" = "UniversalPepeline" "Queue"="Transparent"
         }
         LOD 100
 
@@ -30,7 +30,7 @@ Shader "KM/Seascape"
         {
             name "ShaderToy"
             blend one zero
-            ZWrite on
+            ZWrite off
             ZTest always
             Cull off
             HLSLPROGRAM
@@ -46,6 +46,7 @@ Shader "KM/Seascape"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
 
@@ -217,14 +218,22 @@ Shader "KM/Seascape"
             {
                 float tm = 0.0;
                 float tx = 1000.0;
-                float hx = map(ori + dir * tx);
+                p = ori;
+                if(map(p)<0)
+                {
+                    //起始点就在下面
+                    return 0;
+                }
+                p = ori + dir * tx;
+                float hx = map(p);
                 if (hx > 0.0)
                 {
-                    p = ori + dir * tx;
+                    // 最大距离还在上面
                     return tx;
                 }
 
-                float hm = map(ori + dir * tm);
+                p = ori + dir * tm;
+                float hm = map(p);
                 float tmid = 0.0;
                 for (int i = 0; i < NUM_STEPS; i++)
                 {
@@ -245,23 +254,55 @@ Shader "KM/Seascape"
                 return tmid;
             }
 
-            float3 getPixel(in float2 coord)
+            float3 getPixel(in float2 coord,float3 viewPos)
             {
                 float2 uv = coord / _ScreenParams.xy;
-                uv = uv * 2.0 - 1.0;
-                uv.x *= _ScreenParams.x / _ScreenParams.y;
+                
+                float depth = SampleSceneDepth(uv);
+
+                float3 worldPos = ComputeWorldSpacePosition(uv, depth, UNITY_MATRIX_I_VP);
+
+
+
+                
+                float linearEyeDepth = LinearEyeDepth(depth,_ZBufferParams);
+                
                 // ray
 
                 float3 ori = _WorldSpaceCameraPos;
-                float3 dir = normalize(float3(uv.xy, -2.0));
+                float3 dir = viewPos;
 
                 dir = mul(UNITY_MATRIX_I_V, normalize(dir));
 
                 // tracing point
                 float3 p;
-                heightMapTracing(ori, dir, p);
+                float dis = heightMapTracing(ori, dir, p);
+
+
+                if(dis == 0)
+                {
+                    clip(-1);
+                }
+                //return dis;
 
                 float3 dist = p - ori;
+                float3 objDis = worldPos - ori;
+
+                
+                dis = length(dist);
+                float depthLen = length(objDis);
+                //if(dot(dist, dist)>dot(objDis,objDis))
+                //if(worldPos.y>p.y)
+                if(depthLen<dis)
+                {    
+
+                    clip(-1);
+
+                }                            
+
+
+                //return float3(linearEyeDepth,0,0);
+                //return float3(p.y - SEA_BaseHeight,0,0);
                 float3 n = getNormal(p, dot(dist, dist) * EPSILON_NRM);
 
                 const float3 light_dir = GetMainLight().direction;
@@ -274,7 +315,7 @@ Shader "KM/Seascape"
             }
 
             // main
-            float4 mainImage(float2 fragCoord)
+            float4 mainImage(float2 fragCoord,float3 viewPos)
             {
                 float3 color = float3(0.0, 0.0, 0.0);
                 if (AA == 1)
@@ -284,14 +325,14 @@ Shader "KM/Seascape"
                         for (int j = -1; j <= 1; j++)
                         {
                             float2 uv = fragCoord + float2(i, j) / 3.0;
-                            color += getPixel(uv);
+                            color += getPixel(uv,viewPos);
                         }
                     }
                     color /= 9.0;
                 }
                 else
                 {
-                    color = getPixel(fragCoord);
+                    color = getPixel(fragCoord,viewPos);
                 }
 
                 // post
@@ -312,6 +353,7 @@ Shader "KM/Seascape"
             {
                 float4 positionHCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
+                float3 viewPos : TEXCOORD1;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
@@ -321,8 +363,15 @@ Shader "KM/Seascape"
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
                 //output.positionHCS = TransformObjectToHClip(input.positionOS);
+                float4 cs = float4(input.positionOS.xy, 1, 0.5);
+
+                float3 viewPos = mul(UNITY_MATRIX_I_P,cs);
+                //viewPos = viewPos / viewPos.y;
+                output.viewPos = viewPos;
+                
 
                 output.positionHCS = float4(input.positionOS.xy, 0.5, 0.5);
+                
 
                 output.uv = input.uv;
 
@@ -334,8 +383,10 @@ Shader "KM/Seascape"
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
                 float2 screenUV = input.positionHCS;
+                //return float4(screenUV01,0,1);
+                //return float4(linearEyeDepth,0,0,1);
 
-                return mainImage(screenUV);
+                return mainImage(screenUV,input.viewPos);
             }
             ENDHLSL
         }

@@ -173,6 +173,8 @@ namespace PlanarRef
                 cmd.SetGlobalTexture(s_MirrorTextureID, m_MirrorTexture.nameID);
                 var viewMatrix = camera.worldToCameraMatrix;
                 RenderingUtils.SetViewAndProjectionMatrices(cmd, viewMatrix, cameraData.GetGPUProjectionMatrix(), false);
+                
+                cmd.SetGlobalVector(worldSpaceCameraPos,new Vector4(camTransform.position.x,camTransform.position.y,camTransform.position.z,0));
             }
 
             context.ExecuteCommandBuffer(cmd);
