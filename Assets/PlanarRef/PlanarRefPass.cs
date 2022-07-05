@@ -64,6 +64,29 @@ namespace PlanarRef
             cmd.GetTemporaryRT(s_MirrorTextureID, m_MirrorDescriptor, FilterMode.Bilinear);
         }
 
+        private Matrix4x4 CalculateObliqueMatrix(Vector4 worldSpacePlane, Matrix4x4 viewMatrix, Matrix4x4 projectionMatrix)
+        {
+            var viewSpacePlane = viewMatrix.inverse.transpose * worldSpacePlane;
+            var clipSpaceFarPanelBoundPoint = new Vector4(Mathf.Sign(viewSpacePlane.x), Mathf.Sign(viewSpacePlane.y), 1, 1);
+            var viewSpaceFarPanelBoundPoint = projectionMatrix.inverse * clipSpaceFarPanelBoundPoint;
+        
+            var m4 = new Vector4(projectionMatrix.m30, projectionMatrix.m31, projectionMatrix.m32, projectionMatrix.m33);
+            //u = 2 * (M4·E)/(E·P)，而M4·E == 1，化简得
+            //var u = 2.0f * Vector4.Dot(m4, viewSpaceFarPanelBoundPoint) / Vector4.Dot(viewSpaceFarPanelBoundPoint, viewSpacePlane);
+            var u = 2.0f / Vector4.Dot(viewSpaceFarPanelBoundPoint, viewSpacePlane);
+            var newViewSpaceNearPlane = u * viewSpacePlane;
+ 
+            //M3' = P - M4
+            var m3 = newViewSpaceNearPlane - m4;
+ 
+            projectionMatrix.m20 = m3.x;
+            projectionMatrix.m21 = m3.y;
+            projectionMatrix.m22 = m3.z;
+            projectionMatrix.m23 = m3.w;
+ 
+            return projectionMatrix;
+        }
+
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
             // if (!renderingData.cameraData.camera.name.Contains("mirror"))
@@ -92,6 +115,11 @@ namespace PlanarRef
 
                 var projectionMatrix = camera.projectionMatrix;
 
+                var planeTr = MirrorPlanar.Plane;
+                var normal = planeTr.forward;
+                var d = -Vector3.Dot(normal, planeTr.position);
+                var plane = new Vector4(normal.x, normal.y, normal.z, d);
+                projectionMatrix = CalculateObliqueMatrix(plane,viewM,projectionMatrix);
                 projectionMatrix[8] *= -1;
 
                 var cullMat = Matrix4x4.Frustum(-1, 1, -1, 1, 0.0000001f, 10000000f);
@@ -115,6 +143,9 @@ namespace PlanarRef
 
                     var leftPMat = camera.GetStereoProjectionMatrix(Camera.StereoscopicEye.Left);
                     var rightPMat = camera.GetStereoProjectionMatrix(Camera.StereoscopicEye.Right);
+
+                    leftPMat = CalculateObliqueMatrix(plane,leftViewM,leftPMat);
+                    rightPMat = CalculateObliqueMatrix(plane,rightViewM,rightPMat);
 
                     leftPMat[8] *= -1;
                     rightPMat[8] *= -1;

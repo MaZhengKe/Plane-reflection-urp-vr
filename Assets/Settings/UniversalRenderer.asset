@@ -67,9 +67,7 @@ MonoBehaviour:
   m_Name: PlanarRefFeature
   m_EditorClassIdentifier: 
   m_Active: 1
-  changeMat: 0
-  offset: 0
-  fov: 0
+  drawSkybox: 1
   LayerMask:
     serializedVersion: 2
-    m_Bits: 55
+    m_Bits: 2147483647
