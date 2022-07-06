@@ -5,8 +5,8 @@ Shader "KM/Seascape"
 
         SEA_BASE("基础颜色", Color) = (0.0,0.09,0.18,1)
         SEA_WATER_COLOR("水颜色", Color) = (0.48,0.54,0.36,1)
-        
-        StepVector("采样数组 X:步数 Y：几何 Z:片元 W：AA",vector) = (8,3,5,0)
+
+        StepVector("采样数组 X:步数 Y：几何 Z:片元",vector) = (8,3,5,0)
         SEAData01("X:海基础高度 Y：海浪高度 Z:海浪 W：海浪速度",vector) = (0,0.6,4.0,0.8)
         SEAData02("X:海浪频率 Y：反射 Z:折射 W：折射最大深度",vector) = (0.236,1,0.26,1.85)
     }
@@ -38,13 +38,12 @@ Shader "KM/Seascape"
             #define NUM_STEPS           StepVector.x
             #define ITER_GEOMETRY       StepVector.y
             #define ITER_FRAGMENT       StepVector.z
-            #define AA                  StepVector.w
 
             #define SEA_BaseHeight      SEAData01.x
             #define SEA_HEIGHT          SEAData01.y
             #define SEA_CHOPPY          SEAData01.z
             #define SEA_SPEED           SEAData01.w
-            
+
             #define SEA_FREQ            SEAData02.x
             #define reflectedIndex      SEAData02.y
             #define refractedIndex      SEAData02.z
@@ -65,7 +64,7 @@ Shader "KM/Seascape"
             float3 SEA_BASE;
             float3 SEA_WATER_COLOR;
             CBUFFER_END
-            
+
             float hash(float2 p)
             {
                 float h = dot(p, float2(127.1, 311.7));
@@ -170,16 +169,18 @@ Shader "KM/Seascape"
                 return p.y - h;
             }
 
-            float3 getSeaColor(float3 p, float3 n, float3 l, float3 eye, float3 dist,float3 reflectedColor,float3 refractedColor,float depth)
+            float3 getSeaColor(float3 p, float3 n, float3 l, float3 eye, float3 dist, float3 reflectedColor,
+                               float3 refractedColor, float depth)
             {
                 // return float3(clamp(1-depth,0,1),0,0);
                 float fresnel = clamp(1.0 - dot(n, -eye), 0.0, 1.0);
-                fresnel = pow(fresnel, 3.0)*0.5 ;
+                fresnel = pow(fresnel, 3.0) * 0.5;
                 float3 reflected = getSkyColor(reflect(eye, n));
 
-                reflected = reflectedColor* reflectedIndex;
+                reflected = reflectedColor * reflectedIndex;
                 float3 refracted = SEA_BASE + diffuse(n, l, 80.0) * SEA_WATER_COLOR * 0.12;
-                refracted += refractedColor * refractedIndex * clamp((refractedMaxDepth-depth)/refractedMaxDepth,0,1);
+                refracted += refractedColor * refractedIndex * clamp((refractedMaxDepth - depth) / refractedMaxDepth, 0,
+                                                                     1);
 
                 float3 color = lerp(refracted, reflected, fresnel);
 
@@ -208,7 +209,7 @@ Shader "KM/Seascape"
                 float tm = 0.0;
                 float tx = 1000.0;
                 p = ori;
-                if(map(p)<0)
+                if (map(p) < 0)
                 {
                     //起始点就在下面
                     return 0;
@@ -243,14 +244,14 @@ Shader "KM/Seascape"
                 return tmid;
             }
 
-            float3 getPixel(in float2 coord,float3 viewPos)
+            float3 getPixel(in float2 coord, float3 viewPos)
             {
                 float2 uv = coord / _ScreenParams.xy;
-                
+
                 float depth = SampleSceneDepth(uv);
 
                 float3 worldPos = ComputeWorldSpacePosition(uv, depth, UNITY_MATRIX_I_VP);
-                
+
                 // ray
 
                 float3 ori = _WorldSpaceCameraPos;
@@ -263,7 +264,7 @@ Shader "KM/Seascape"
                 float dis = heightMapTracing(ori, dir, p);
 
 
-                if(dis == 0)
+                if (dis == 0)
                 {
                     clip(-1);
                 }
@@ -272,14 +273,14 @@ Shader "KM/Seascape"
                 float3 dist = p - ori;
                 float3 objDis = worldPos - ori;
 
-                
+
                 dis = length(dist);
                 float depthLen = length(objDis);
 
-                if(depthLen<dis)
-                {    
+                if (depthLen < dis)
+                {
                     clip(-1);
-                }                            
+                }
 
                 float3 n = getNormal(p, dot(dist, dist) * EPSILON_NRM);
 
@@ -295,35 +296,8 @@ Shader "KM/Seascape"
                 // color 以地平线来分割
                 return lerp(
                     getSkyColor(dir),
-                    getSeaColor(p, n, light_dir, dir, dist,refColor,sceneColor,depthLen - dis),
+                    getSeaColor(p, n, light_dir, dir, dist, refColor, sceneColor, depthLen - dis),
                     pow(smoothstep(0.0, -0.02, dir.y), 0.2));
-            }
-
-            // main
-            float4 mainImage(float2 fragCoord,float3 viewPos)
-            {
-                float3 color = float3(0.0, 0.0, 0.0);
-                if (AA == 1)
-                {
-                    for (int i = -1; i <= 1; i++)
-                    {
-                        for (int j = -1; j <= 1; j++)
-                        {
-                            float2 uv = fragCoord + float2(i, j) / 3.0;
-                            color += getPixel(uv,viewPos);
-                        }
-                    }
-                    color /= 9.0;
-                }
-                else
-                {
-                    color = getPixel(fragCoord,viewPos);
-                }
-
-                // post
-                color = clamp(color, 0, 1);
-                color = pow((color), 0.65);
-                return float4(color, 1.0);
             }
 
 
@@ -347,31 +321,37 @@ Shader "KM/Seascape"
                 Varyings output;
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
-                //output.positionHCS = TransformObjectToHClip(input.positionOS);
-                float4 cs = float4(input.positionOS.xy, 1, 0.5);
-
-                float3 viewPos = mul(UNITY_MATRIX_I_P,cs);
-                //viewPos = viewPos / viewPos.y;
-                output.viewPos = viewPos;
-                
-
                 output.positionHCS = float4(input.positionOS.xy, 0.5, 0.5);
-                
-
+                output.viewPos = mul(UNITY_MATRIX_I_P, output.positionHCS);
                 output.uv = input.uv;
-
                 return output;
             }
+
+            // VR下不要启用抗锯齿，GPU寄存器不够
+            // #define AA
 
             half4 frag(Varyings input):SV_Target
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-                float2 screenUV = input.positionHCS;
-                //return float4(screenUV01,0,1);
-                //return float4(linearEyeDepth,0,0,1);
+                float2 screenPos = input.positionHCS;
 
-                return mainImage(screenUV,input.viewPos);
+                #ifdef AA
+                float3 color = float3(0.0, 0.0, 0.0);
+                for (int i = -1; i <= 1; i++)
+                {
+                    for (int j = -1; j <= 1; j++)
+                    {
+                        float2 uv = screenPos + float2(i, j) / 3.0;
+                        color += getPixel(uv, input.viewPos);
+                    }
+                }
+                color /= 9.0;
+                #else
+                float3 color = getPixel(screenPos, input.viewPos);
+                #endif
+                // post
+                return float4(pow(clamp(color, 0, 1), 0.65), 1.0);
             }
             ENDHLSL
         }
