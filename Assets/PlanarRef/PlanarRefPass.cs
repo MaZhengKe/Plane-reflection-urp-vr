@@ -159,7 +159,7 @@ namespace PlanarRef
                 else
                 {
                     cmd.SetGlobalVector(worldSpaceCameraPos,new Vector4(mirrorPos.x,mirrorPos.y,mirrorPos.z,0));
-                    RenderingUtils.SetViewAndProjectionMatrices(cmd, viewM, projectionMatrix, false);
+                    RenderingUtils.SetViewAndProjectionMatrices(cmd, viewM, projectionMatrix, true);
                 }
 
                 context.ExecuteCommandBuffer(cmd);
@@ -172,7 +172,7 @@ namespace PlanarRef
 
                 cmd.SetGlobalTexture(s_MirrorTextureID, m_MirrorTexture.nameID);
                 var viewMatrix = camera.worldToCameraMatrix;
-                RenderingUtils.SetViewAndProjectionMatrices(cmd, viewMatrix, cameraData.GetGPUProjectionMatrix(), false);
+                RenderingUtils.SetViewAndProjectionMatrices(cmd, viewMatrix, cameraData.GetGPUProjectionMatrix(), true);
                 
                 cmd.SetGlobalVector(worldSpaceCameraPos,new Vector4(camTransform.position.x,camTransform.position.y,camTransform.position.z,0));
             }

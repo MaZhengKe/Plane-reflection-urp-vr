@@ -316,7 +316,6 @@ Shader "KM/Seascape"
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
                 const float2 screen_pos = input.positionHCS.xy;
-                _Time = 0;
 
                 #ifdef AA
                 float3 color = float3(0.0, 0.0, 0.0);

@@ -2,13 +2,20 @@ Shader "KM/Cloud"
 {
     Properties
     {
+        cloudHeight ("cloudHeight ",float) = 1.1
 
-        SEA_BASE("基础颜色", Color) = (0.0,0.09,0.18,1)
-        SEA_WATER_COLOR("水颜色", Color) = (0.48,0.54,0.36,1)
+        cloudscale ("cloudscale ",float) = 1.1
+        speed ("speed      ",float) = 0.03
+        clouddark ("clouddark  ",float) = 0.5
+        cloudlight ("cloudlight ",float) = 0.3
+        cloudcover ("cloudcover ",float) = 0.2
+        cloudalpha ("cloudalpha ",float) = 8.0
+        skytint ("skytint    ",float) = 0.5
 
-        StepVector("采样数组 X:步数 Y：几何 Z:片元",vector) = (8,3,5,0)
-        SEAData01("X:基础高度 Y：浪高 Z:陡峭程度 W：速度",vector) = (0,0.6,4.0,0.8)
-        SEAData02("X:海浪频率 Y：反射 Z:折射 W：折射最大深度",vector) = (0.236,1,0.26,1.85)
+
+        skycolour1("skycolour1",Color) = (0.2, 0.4, 0.6)
+        skycolour2("skycolour2",Color) = (0.4, 0.7, 1.0)
+
     }
     SubShader
     {
@@ -22,7 +29,7 @@ Shader "KM/Cloud"
         {
             name "ShaderToy"
             blend one zero
-            ZWrite off
+            ZWrite on
             ZTest Lequal
             Cull off
             HLSLPROGRAM
@@ -31,23 +38,6 @@ Shader "KM/Cloud"
 
             #define iGlobalTime   _Time.y
             #define iTime   _Time.y
-
-            #define EPSILON_NRM (0.1 / _ScreenParams.x)
-            #define SEA_TIME (1.0 + iTime * SEA_SPEED)
-
-            #define NUM_STEPS           StepVector.x
-            #define ITER_GEOMETRY       StepVector.y
-            #define ITER_FRAGMENT       StepVector.z
-
-            #define SEA_BaseHeight      SEAData01.x
-            #define SEA_HEIGHT          SEAData01.y
-            #define SEA_CHOPPY          SEAData01.z
-            #define SEA_SPEED           SEAData01.w
-
-            #define SEA_FREQ            SEAData02.x
-            #define reflectedIndex      SEAData02.y
-            #define refractedIndex      SEAData02.z
-            #define refractedMaxDepth   SEAData02.w
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -58,11 +48,18 @@ Shader "KM/Cloud"
             SAMPLER(sampler_MirrorTex);
 
             CBUFFER_START(UnityPerMaterial)
-            float4 StepVector;
-            float4 SEAData01;
-            float4 SEAData02;
-            float3 SEA_BASE;
-            float3 SEA_WATER_COLOR;
+
+            float cloudHeight = 1.1;
+            float cloudscale = 1.1;
+            float speed = 0.03;
+            float clouddark = 0.5;
+            float cloudlight = 0.3;
+            float cloudcover = 0.2;
+            float cloudalpha = 8.0;
+            float skytint = 0.5;
+            float3 skycolour1 = float3(0.2, 0.4, 0.6);
+            float3 skycolour2 = float3(0.4, 0.7, 1.0);
+
             CBUFFER_END
 
             struct Attributes
@@ -85,47 +82,148 @@ Shader "KM/Cloud"
                 Varyings output;
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
-                output.positionHCS = float4(input.positionOS.xy*1000, 0.5, 0.5*1000);
+                output.positionHCS = float4(input.positionOS.xy * 1000, 0.5, 0.5 * 1000);
                 output.viewPos = mul(UNITY_MATRIX_I_P, output.positionHCS).xyz;
                 output.uv = input.uv;
                 return output;
             }
 
+            const static float2x2 m = float2x2(1.6, 1.2, -1.2, 1.6);
+
+            float2 hash(float2 p)
+            {
+                p = float2(dot(p, float2(127.1, 311.7)), dot(p, float2(269.5, 183.3)));
+                return -1.0 + 2.0 * frac(sin(p) * 43758.5453123);
+            }
+
+            float noise(in float2 p)
+            {
+                const float K1 = 0.366025404; // (sqrt(3)-1)/2;
+                const float K2 = 0.211324865; // (3-sqrt(3))/6;
+                float2 i = floor(p + (p.x + p.y) * K1);
+                float2 a = p - i + (i.x + i.y) * K2;
+                float2 o = (a.x > a.y) ? float2(1.0, 0.0) : float2(0.0, 1.0);
+                //float2 of = 0.5 + 0.5*float2(sign(a.x-a.y), sign(a.y-a.x));
+                float2 b = a - o + K2;
+                float2 c = a - 1.0 + 2.0 * K2;
+                float3 h = max(0.5 - float3(dot(a, a), dot(b, b), dot(c, c)), 0.0);
+                float3 n = h * h * h * h * float3(dot(a, hash(i + 0.0)), dot(b, hash(i + o)), dot(c, hash(i + 1.0)));
+                return dot(n, float3(70.0, 70.0, 70.0));
+            }
+
+            float fbm(float2 n)
+            {
+                float total = 0.0, amplitude = 0.1;
+                for (int i = 0; i < 7; i++)
+                {
+                    total += noise(n) * amplitude;
+                    n = mul(m, n);
+                    amplitude *= 0.4;
+                }
+                return total;
+            }
+
+            // -----------------------------------------------
+
+            float3 mainImage(in float2 fragCoord,float3 dir)
+            {
+                float2 mianUV = fragCoord.xy / _ScreenParams.xy;
+                float2 uv = mianUV;
+                float time = iTime * speed;
+                float q = fbm(uv * cloudscale * 0.5);
+
+                //ridged noise shape
+                float r = 0.0;
+                uv *= cloudscale;
+                uv -= q - time;
+                float weight = 0.8;
+                for (int i = 0; i < 8; i++)
+                {
+                    r += abs(weight * noise(uv));
+                    uv = mul(m, uv) + time;
+                    weight *= 0.7;
+                }
+
+                //noise shape
+                float f = 0.0;
+                uv = mianUV;
+                uv *= cloudscale;
+                uv -= q - time;
+                weight = 0.7;
+                for (int i = 0; i < 8; i++)
+                {
+                    f += weight * noise(uv);
+                    uv = mul(m, uv) + time;
+                    weight *= 0.6;
+                }
+
+                f *= r + f;
+
+                //noise colour
+                float c = 0.0;
+                time = iTime * speed * 2.0;
+                uv = mianUV;
+                uv *= cloudscale * 2.0;
+                uv -= q - time;
+                weight = 0.4;
+                for (int i = 0; i < 7; i++)
+                {
+                    c += weight * noise(uv);
+                    uv = mul(m, uv) + time;
+                    weight *= 0.6;
+                }
+
+                //noise ridge colour
+                float c1 = 0.0;
+                time = iTime * speed * 3.0;
+                uv = mianUV;
+                uv *= cloudscale * 3.0;
+                uv -= q - time;
+                weight = 0.4;
+                for (int i = 0; i < 7; i++)
+                {
+                    c1 += abs(weight * noise(uv));
+                    uv = mul(m, uv) + time;
+                    weight *= 0.6;
+                }
+
+                c += c1;
+
+                float3 skycolour = lerp(skycolour2, skycolour1, dir.y);
+                float3 cloudcolour = float3(1.1, 1.1, 0.9) * clamp((clouddark + cloudlight * c), 0.0, 1.0);
+
+                f = cloudcover + cloudalpha * f * r;
+
+                float3 result = lerp(skycolour, clamp(skytint * skycolour + cloudcolour, 0.0, 1.0),
+                                     clamp(f + c, 0.0, 1.0) *dir.y);
+
+                return result;
+            }
+
             float3 getPixel(in float2 screen_pos)
             {
-                
-                float2 screen01Pos = screen_pos/_ScreenParams;
-                float2 screen11pos = (screen01Pos-0.5)*2;
-                screen11pos.y*=-1;
-                float4 Hs = float4(screen11pos,0.5,1);
+                float2 screen01Pos = screen_pos / _ScreenParams;
+                float2 screen11pos = (screen01Pos - 0.5) * 2;
+                screen11pos.y *= -1;
+                float4 Hs = float4(screen11pos, 0.5, 1);
                 float3 viewDir = mul(UNITY_MATRIX_I_P, Hs).xyz;
 
-                
-                float3 ori = _WorldSpaceCameraPos;
-                float3 dirWS = mul(UNITY_MATRIX_I_V, float4(normalize(viewDir),0)).xyz;
+                float3 dirWS = mul(UNITY_MATRIX_I_V, float4(normalize(viewDir), 0)).xyz;
                 clip(dirWS.y);
 
 
-                float x = dirWS.x/dirWS.y * SEA_HEIGHT;
-                float z = dirWS.z/dirWS.y * SEA_HEIGHT;
+                float x = dirWS.x / dirWS.y * cloudHeight;
+                float z = dirWS.z / dirWS.y * cloudHeight;
 
-                float3 ws = float3(x,SEA_HEIGHT,z);
-                float3 color = float3(0,0,0);
+                float3 ws = float3(x, cloudHeight, z);
 
-                if(fmod(abs(ws.x) , SEA_BaseHeight)>SEA_BaseHeight*0.9)
-                {
-                    color = 1;
-                }
+
+                return mainImage(ws.xz,dirWS);
                 
-                if(fmod(abs(ws.z) , SEA_BaseHeight)>SEA_BaseHeight*0.9)
-                {
-                    color = 1;
-                }
-                return color;
             }
 
             // VR下不要启用抗锯齿，GPU寄存器不够
-             #define AA
+            //#define AA
 
             half4 frag(Varyings input):SV_Target
             {
@@ -139,9 +237,9 @@ Shader "KM/Cloud"
                 {
                     for (int j = -1; j <= 1; j++)
                     {
-                        float2 uv = screen_pos + float2(i, j)/3;
-                        
-                        color += getPixel(uv );
+                        float2 uv = screen_pos + float2(i, j) / 3;
+
+                        color += getPixel(uv);
                     }
                 }
                 color /= 9.0;
@@ -150,9 +248,8 @@ Shader "KM/Cloud"
                 
                 float3 color = getPixel(screen_pos);
                 #endif
-                
 
-                
+
                 return float4(pow(clamp(color, 0, 1), 0.65), 1.0);
             }
             ENDHLSL

@@ -38,7 +38,7 @@ Material:
     - refractedIndex: 0.26
     - refractedMaxDepth: 1.85
     m_Colors:
-    - SEAData01: {r: 0.05, g: 0.1, b: 4, a: 0.8}
+    - SEAData01: {r: 0.05, g: 0.09, b: 4, a: 0.8}
     - SEAData02: {r: 0.4, g: 1, b: 0.26, a: 1.85}
     - SEA_BASE: {r: 0, g: 0.089999996, b: 0.17999998, a: 1}
     - SEA_WATER_COLOR: {r: 0.47999996, g: 0.53999996, b: 0.35999998, a: 1}
