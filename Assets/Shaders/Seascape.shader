@@ -109,7 +109,7 @@ Shader "KM/Seascape"
                 float2 wv = 1.0 - abs(sin(uv));
                 float2 swv = abs(cos(uv));
                 wv = lerp(wv, swv, wv);
-                return pow(abs(1.0 - pow(wv.x * wv.y, 0.65)), choppy);
+                return pow(abs(1.0 - pow(abs(wv.x * wv.y), 0.65)), choppy);
             }
 
             const static float2x2 octave_m = float2x2(1.6, 1.2, -1.2, 1.6);
@@ -238,10 +238,18 @@ Shader "KM/Seascape"
                 return float4(p,tmid);
             }
 
-            float3 getPixel(in float2 uv, float3 viewPos)
+            float3 getPixel(in float2 screen_pos)
             {
+                
+                float2 uv = screen_pos/_ScreenParams;
+                float2 screen11pos = (uv-0.5)*2;
+                screen11pos.y*=-1;
+                float4 Hs = float4(screen11pos,0.5,1);
+                float3 viewPos = mul(UNITY_MATRIX_I_P, Hs).xyz;
+
+                
                 float3 ori = _WorldSpaceCameraPos;
-                float3 dir = mul(UNITY_MATRIX_I_V, normalize(viewPos));
+                float3 dir = mul(UNITY_MATRIX_I_V, float4(normalize(viewPos),0)).xyz;
                 clip(-dir.y);
 
                 // tracing point
@@ -262,7 +270,7 @@ Shader "KM/Seascape"
                 screenUV.x = 1 - screenUV.x;
                 screenUV += n.xz * 0.1;
 
-                const float3 reflectedColor = SAMPLE_TEXTURE2D_X(_MirrorTex, sampler_MirrorTex, screenUV);
+                const float3 reflectedColor = SAMPLE_TEXTURE2D_X(_MirrorTex, sampler_MirrorTex, screenUV).xyz;
                 const float3 refractedColor = SampleSceneColor(uv + n.xz * 0.05);
                 const float3 light_dir = GetMainLight().direction;
 
@@ -295,19 +303,20 @@ Shader "KM/Seascape"
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
                 output.positionHCS = float4(input.positionOS.xy, 0.5, 0.5);
-                output.viewPos = mul(UNITY_MATRIX_I_P, output.positionHCS);
+                output.viewPos = mul(UNITY_MATRIX_I_P, output.positionHCS).xyz;
                 output.uv = input.uv;
                 return output;
             }
 
             // VR下不要启用抗锯齿，GPU寄存器不够
-            // #define AA
+             #define AA
 
             half4 frag(Varyings input):SV_Target
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-                const float2 screen_pos = input.positionHCS;
+                const float2 screen_pos = input.positionHCS.xy;
+                _Time = 0;
 
                 #ifdef AA
                 float3 color = float3(0.0, 0.0, 0.0);
@@ -315,13 +324,13 @@ Shader "KM/Seascape"
                 {
                     for (int j = -1; j <= 1; j++)
                     {
-                        float2 uv = screenPos + float2(i, j) / 3.0;
-                        color += getPixel(uv / _ScreenParams.xy, input.viewPos);
+                        float2 uv = screen_pos + float2(i, j) / 3.0;
+                        color += getPixel(uv);
                     }
                 }
                 color /= 9.0;
                 #else
-                float3 color = getPixel(screen_pos / _ScreenParams.xy, input.viewPos);
+                float3 color = getPixel(screen_pos);
                 #endif
                 // post
                 return float4(pow(clamp(color, 0, 1), 0.65), 1.0);
