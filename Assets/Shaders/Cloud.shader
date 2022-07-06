@@ -28,7 +28,7 @@ Shader "KM/Cloud"
         Pass
         {
             name "ShaderToy"
-            blend one zero
+            blend one one
             ZWrite on
             ZTest Lequal
             Cull off
@@ -190,14 +190,15 @@ Shader "KM/Cloud"
                 c += c1;
 
                 float3 skycolour = lerp(skycolour2, skycolour1, dir.y);
+                skycolour = 0;
                 float3 cloudcolour = float3(1.1, 1.1, 0.9) * clamp((clouddark + cloudlight * c), 0.0, 1.0);
 
                 f = cloudcover + cloudalpha * f * r;
 
                 float3 result = lerp(skycolour, clamp(skytint * skycolour + cloudcolour, 0.0, 1.0),
-                                     clamp(f + c, 0.0, 1.0) *dir.y);
+                                     clamp(f + c, 0.0, 1.0) * clamp(dir.y*1.5 - 0.7,0,1));
 
-                return result;
+                return clamp(result,0,1);
             }
 
             float3 getPixel(in float2 screen_pos)
@@ -250,7 +251,7 @@ Shader "KM/Cloud"
                 #endif
 
 
-                return float4(pow(clamp(color, 0, 1), 0.65), 1.0);
+                return float4(clamp(color,0,1), 1.0);
             }
             ENDHLSL
         }
