@@ -7,7 +7,7 @@ Shader "KM/Seascape"
         SEA_WATER_COLOR("水颜色", Color) = (0.48,0.54,0.36,1)
 
         StepVector("采样数组 X:步数 Y：几何 Z:片元",vector) = (8,3,5,0)
-        SEAData01("X:海基础高度 Y：海浪高度 Z:海浪 W：海浪速度",vector) = (0,0.6,4.0,0.8)
+        SEAData01("X:基础高度 Y：浪高 Z:陡峭程度 W：速度",vector) = (0,0.6,4.0,0.8)
         SEAData02("X:海浪频率 Y：反射 Z:折射 W：折射最大深度",vector) = (0.236,1,0.26,1.85)
     }
     SubShader
@@ -104,6 +104,7 @@ Shader "KM/Seascape"
             // sea 
             float sea_octave(float2 uv, float choppy)
             {
+                //return 0;
                 uv += noise(uv);
                 float2 wv = 1.0 - abs(sin(uv));
                 float2 swv = abs(cos(uv));
@@ -111,34 +112,32 @@ Shader "KM/Seascape"
                 return pow(abs(1.0 - pow(wv.x * wv.y, 0.65)), choppy);
             }
 
+            const static float2x2 octave_m = float2x2(1.6, 1.2, -1.2, 1.6);
+            
             // p:point return 高度差
             float map(float3 p)
             {
                 float freq = SEA_FREQ;
-                float amp = SEA_HEIGHT;
+                float amp = 1;
                 float choppy = SEA_CHOPPY;
 
                 float2 uv = p.xz;
-
-
-                float2x2 octave_m = float2x2(1.6, 1.2, -1.2, 1.6);
-                // why
-                uv.x *= 0.75;
-                float d = 0.0;
                 float h = SEA_BaseHeight;
+                
+                float allH = (1-pow(0.22,ITER_GEOMETRY)/(1-0.22));
+                
                 for (int i = 0; i < ITER_GEOMETRY; i++)
                 {
-                    d = sea_octave((uv + SEA_TIME) * freq, choppy);
+                    float d = sea_octave((uv + SEA_TIME) * freq, choppy);
                     d += sea_octave((uv - SEA_TIME) * freq, choppy);
-                    h += d * amp;
-                    //uv *= octave_m;
-                    //uv = mul(octave_m, uv);
+                    h += d * amp/allH * SEA_HEIGHT;
                     // 只是扰动变换了UV
                     uv = mul(uv, octave_m);
-                    //频率加快
+                    // 频率加快
                     freq *= 1.9;
-                    //高度降低
+                    // 高度降低
                     amp *= 0.22;
+                    // 更加平缓
                     choppy = lerp(choppy, 1.0, 0.2);
                 }
                 return p.y - h;
@@ -146,22 +145,18 @@ Shader "KM/Seascape"
 
             float map_detailed(float3 p)
             {
-                float2x2 octave_m = float2x2(1.6, 1.2, -1.2, 1.6);
                 float freq = SEA_FREQ;
-                float amp = SEA_HEIGHT;
+                float amp = 1;
                 float choppy = SEA_CHOPPY;
                 float2 uv = p.xz;
-                uv.x *= 0.75;
-                float d = 0.0;
                 float h = SEA_BaseHeight;
+                float allH = (1-pow(0.22,ITER_FRAGMENT)/(1-0.22));
                 for (int i = 0; i < ITER_FRAGMENT; i++)
                 {
-                    d = sea_octave((uv + SEA_TIME) * freq, choppy);
+                    float d = sea_octave((uv + SEA_TIME) * freq, choppy);
                     d += sea_octave((uv - SEA_TIME) * freq, choppy);
-                    h += d * amp;
-                    //uv *= octave_m;
-                    uv = mul(octave_m, uv);
-                    // uv = mul(uv, octave_m);
+                    h += d * amp/allH * SEA_HEIGHT;
+                    uv = mul(uv, octave_m);
                     freq *= 1.9;
                     amp *= 0.22;
                     choppy = lerp(choppy, 1.0, 0.2);
@@ -169,27 +164,25 @@ Shader "KM/Seascape"
                 return p.y - h;
             }
 
-            float3 getSeaColor(float3 p, float3 n, float3 l, float3 eye, float3 dist, float3 reflectedColor,
-                               float3 refractedColor, float depth)
+            float3 getSeaColor(float height, float3 n, float3 l, float3 eye, float dist, float3 reflectedColor,
+                               float3 refractedColor, float waterDepth)
             {
-                // return float3(clamp(1-depth,0,1),0,0);
                 float fresnel = clamp(1.0 - dot(n, -eye), 0.0, 1.0);
                 fresnel = pow(fresnel, 3.0) * 0.5;
-                float3 reflected = getSkyColor(reflect(eye, n));
 
-                reflected = reflectedColor * reflectedIndex;
+                float3 reflected = reflectedColor * reflectedIndex;
                 float3 refracted = SEA_BASE + diffuse(n, l, 80.0) * SEA_WATER_COLOR * 0.12;
-                refracted += refractedColor * refractedIndex * clamp((refractedMaxDepth - depth) / refractedMaxDepth, 0,
-                                                                     1);
+                refracted += refractedColor * refractedIndex * clamp((refractedMaxDepth - waterDepth) / refractedMaxDepth, 0,1);
 
                 float3 color = lerp(refracted, reflected, fresnel);
 
                 // 距离衰减
-                float atten = max(1.0 - dot(dist, dist) * 0.001, 0.0);
+                float atten = max(1.0 - dist * dist * 0.001, 0.0);
 
-                color += SEA_WATER_COLOR * (p.y - SEA_HEIGHT - SEA_BaseHeight) * 0.18 * atten;
+                color += SEA_WATER_COLOR * (height - SEA_HEIGHT - SEA_BaseHeight) * 0.18 * atten;
                 color += (specular(n, l, eye, 60.0));
-                return color;
+                
+                return lerp(color,1,clamp((0.05 - waterDepth)/0.05,0,1));
             }
 
             // tracing
@@ -204,15 +197,16 @@ Shader "KM/Seascape"
             }
 
             // 高度图步进
-            float heightMapTracing(float3 ori, float3 dir, out float3 p)
+            float4 heightMapTracing(float3 ori, float3 dir)
             {
+                float3 p;
                 float tm = 0.0;
                 float tx = 1000.0;
                 p = ori;
                 if (map(p) < 0)
                 {
                     //起始点就在下面
-                    return 0;
+                    return -1;
                 }
                 p = ori + dir * tx;
                 float hx = map(p);
@@ -241,62 +235,41 @@ Shader "KM/Seascape"
                         hm = hmid;
                     }
                 }
-                return tmid;
+                return float4(p,tmid);
             }
 
-            float3 getPixel(in float2 coord, float3 viewPos)
+            float3 getPixel(in float2 uv, float3 viewPos)
             {
-                float2 uv = coord / _ScreenParams.xy;
-
-                float depth = SampleSceneDepth(uv);
-
-                float3 worldPos = ComputeWorldSpacePosition(uv, depth, UNITY_MATRIX_I_VP);
-
-                // ray
-
                 float3 ori = _WorldSpaceCameraPos;
-                float3 dir = viewPos;
-
-                dir = mul(UNITY_MATRIX_I_V, normalize(dir));
+                float3 dir = mul(UNITY_MATRIX_I_V, normalize(viewPos));
+                clip(-dir.y);
 
                 // tracing point
-                float3 p;
-                float dis = heightMapTracing(ori, dir, p);
+                const float4 data = heightMapTracing(ori, dir);
+                clip(data.w);
 
+                float depth = SampleSceneDepth(uv);
+                float3 worldPos = ComputeWorldSpacePosition(uv, depth, UNITY_MATRIX_I_VP);
+                // ray
 
-                if (dis == 0)
-                {
-                    clip(-1);
-                }
-                //return dis;
+                const float3 objDis = worldPos - ori;
+                const float waterDepth = length(objDis) - data.w ;
+                clip(waterDepth);
 
-                float3 dist = p - ori;
-                float3 objDis = worldPos - ori;
-
-
-                dis = length(dist);
-                float depthLen = length(objDis);
-
-                if (depthLen < dis)
-                {
-                    clip(-1);
-                }
-
-                float3 n = getNormal(p, dot(dist, dist) * EPSILON_NRM);
+                float3 n = getNormal(data.xyz, data.w  * data.w  * EPSILON_NRM);
 
                 float2 screenUV = uv;
-                //screenUV.y = 1 - screenUV.y;
                 screenUV.x = 1 - screenUV.x;
                 screenUV += n.xz * 0.1;
-                float3 refColor = SAMPLE_TEXTURE2D_X(_MirrorTex, sampler_MirrorTex, screenUV);
 
+                const float3 reflectedColor = SAMPLE_TEXTURE2D_X(_MirrorTex, sampler_MirrorTex, screenUV);
+                const float3 refractedColor = SampleSceneColor(uv + n.xz * 0.05);
                 const float3 light_dir = GetMainLight().direction;
 
-                float3 sceneColor = SampleSceneColor(uv + n.xz * 0.05);
                 // color 以地平线来分割
                 return lerp(
                     getSkyColor(dir),
-                    getSeaColor(p, n, light_dir, dir, dist, refColor, sceneColor, depthLen - dis),
+                    getSeaColor(data.y, n, light_dir, dir, data.w , reflectedColor, refractedColor, waterDepth),
                     pow(smoothstep(0.0, -0.02, dir.y), 0.2));
             }
 
@@ -334,7 +307,7 @@ Shader "KM/Seascape"
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-                float2 screenPos = input.positionHCS;
+                const float2 screen_pos = input.positionHCS;
 
                 #ifdef AA
                 float3 color = float3(0.0, 0.0, 0.0);
@@ -343,12 +316,12 @@ Shader "KM/Seascape"
                     for (int j = -1; j <= 1; j++)
                     {
                         float2 uv = screenPos + float2(i, j) / 3.0;
-                        color += getPixel(uv, input.viewPos);
+                        color += getPixel(uv / _ScreenParams.xy, input.viewPos);
                     }
                 }
                 color /= 9.0;
                 #else
-                float3 color = getPixel(screenPos, input.viewPos);
+                float3 color = getPixel(screen_pos / _ScreenParams.xy, input.viewPos);
                 #endif
                 // post
                 return float4(pow(clamp(color, 0, 1), 0.65), 1.0);

@@ -38,11 +38,11 @@ Material:
     - refractedIndex: 0.26
     - refractedMaxDepth: 1.85
     m_Colors:
-    - SEAData01: {r: 0, g: 0.24, b: 4, a: 0.8}
-    - SEAData02: {r: 0.16, g: 1, b: 0.26, a: 1.85}
+    - SEAData01: {r: 0.05, g: 0.1, b: 4, a: 0.8}
+    - SEAData02: {r: 0.4, g: 1, b: 0.26, a: 1.85}
     - SEA_BASE: {r: 0, g: 0.089999996, b: 0.17999998, a: 1}
     - SEA_WATER_COLOR: {r: 0.47999996, g: 0.53999996, b: 0.35999998, a: 1}
-    - StepVector: {r: 8, g: 3, b: 5, a: 0}
+    - StepVector: {r: 7, g: 3, b: 5, a: 0}
     - _ang: {r: 0, g: 0, b: 0, a: 0}
     - _iMouse: {r: 0, g: 0, b: 0, a: 0}
     - _iResolution: {r: 135.92, g: 1, b: 0, a: 0}
