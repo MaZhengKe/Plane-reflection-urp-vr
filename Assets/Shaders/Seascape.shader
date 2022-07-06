@@ -5,24 +5,10 @@ Shader "KM/Seascape"
 
         SEA_BASE("基础颜色", Color) = (0.0,0.09,0.18,1)
         SEA_WATER_COLOR("水颜色", Color) = (0.48,0.54,0.36,1)
-
-        NUM_STEPS("采样步数",int) = 8
-        ITER_GEOMETRY("ITER_GEOMETRY",int) = 3
-        ITER_FRAGMENT ("ITER_FRAGMENT",int) = 5
-
-        SEA_BaseHeight("海基础高度",range(-10,10)) = 0
-        SEA_HEIGHT("海浪高度",range(0,1)) = 0.6
-        SEA_CHOPPY("海浪",range(0,10)) = 4.0
-        SEA_SPEED("海浪速度",range(0,1)) = 0.8
-        SEA_FREQ("海浪频率",range(0,0.5)) = 0.16
         
-        reflectedIndex("反射",range(0,1.0)) = 0.16
-        refractedIndex("折射",range(0,1.0)) = 0.16
-        refractedMaxDepth("折射最大深度",range(0,3)) = 1
-        
-        
-
-        AA("AA",Integer) = 1
+        StepVector("采样数组 X:步数 Y：几何 Z:片元 W：AA",vector) = (8,3,5,0)
+        SEAData01("X:海基础高度 Y：海浪高度 Z:海浪 W：海浪速度",vector) = (0,0.6,4.0,0.8)
+        SEAData02("X:海浪频率 Y：反射 Z:折射 W：折射最大深度",vector) = (0.236,1,0.26,1.85)
     }
     SubShader
     {
@@ -49,6 +35,20 @@ Shader "KM/Seascape"
             #define EPSILON_NRM (0.1 / _ScreenParams.x)
             #define SEA_TIME (1.0 + iTime * SEA_SPEED)
 
+            #define NUM_STEPS           StepVector.x
+            #define ITER_GEOMETRY       StepVector.y
+            #define ITER_FRAGMENT       StepVector.z
+            #define AA                  StepVector.w
+
+            #define SEA_BaseHeight      SEAData01.x
+            #define SEA_HEIGHT          SEAData01.y
+            #define SEA_CHOPPY          SEAData01.z
+            #define SEA_SPEED           SEAData01.w
+            
+            #define SEA_FREQ            SEAData02.x
+            #define reflectedIndex      SEAData02.y
+            #define refractedIndex      SEAData02.z
+            #define refractedMaxDepth   SEAData02.w
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -59,41 +59,13 @@ Shader "KM/Seascape"
             SAMPLER(sampler_MirrorTex);
 
             CBUFFER_START(UnityPerMaterial)
-
-            int NUM_STEPS = 8;
-            int ITER_GEOMETRY = 3;
-            int ITER_FRAGMENT = 5;
-            float SEA_HEIGHT = 0.6;
-            float SEA_BaseHeight = 0.6;
-            float SEA_CHOPPY = 4.0;
-            float SEA_SPEED = 0.8;
-            float SEA_FREQ = 0.16;
-            float reflectedIndex;
-            float refractedIndex;
-            float refractedMaxDepth;
-            float3 SEA_BASE = float3(0.0, 0.09, 0.18);
-            float3 SEA_WATER_COLOR = float3(0.8, 0.9, 0.6) * 0.6;
-
-            int AA;
-
+            float4 StepVector;
+            float4 SEAData01;
+            float4 SEAData02;
+            float3 SEA_BASE;
+            float3 SEA_WATER_COLOR;
             CBUFFER_END
-
-
-            //#define AA
-
-            // math
-            float3x3 fromEuler(float3 ang)
-            {
-                float2 xx = float2(sin(ang.x), cos(ang.x));
-                float2 yy = float2(sin(ang.y), cos(ang.y));
-                float2 zz = float2(sin(ang.z), cos(ang.z));
-                float3x3 m;
-                m[0] = float3(xx.y * zz.y + xx.x * yy.x * zz.x, xx.y * yy.x * zz.x + zz.y * xx.x, -yy.y * zz.x);
-                m[1] = float3(-yy.y * xx.x, xx.y * yy.y, yy.x);
-                m[2] = float3(zz.y * xx.x * yy.x + xx.y * zz.x, xx.x * zz.x - xx.y * zz.y * yy.x, yy.y * zz.y);
-                return m;
-            }
-
+            
             float hash(float2 p)
             {
                 float h = dot(p, float2(127.1, 311.7));
