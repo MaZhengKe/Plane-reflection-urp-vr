@@ -242,22 +242,33 @@ Shader "KM/Seascape"
             {
                 
                 float2 uv = screen_pos/_ScreenParams;
-                float2 screen11pos = (uv-0.5)*2;
-                screen11pos.y*=-1;
-                float4 Hs = float4(screen11pos,0.5,1);
-                float3 viewPos = mul(UNITY_MATRIX_I_P, Hs).xyz;
+                float2 screen11pos = uv*2 - 1;
 
                 
+                #ifdef  UNITY_UV_STARTS_AT_TOP
+                screen11pos.y*=-1;
+                #endif
+                
                 float3 ori = _WorldSpaceCameraPos;
-                float3 dir = mul(UNITY_MATRIX_I_V, float4(normalize(viewPos),0)).xyz;
+                float3 dir = ComputeWorldSpacePosition(uv, 0, UNITY_MATRIX_I_VP);
+
+                dir =  dir - ori;
+                dir = normalize(dir);
                 clip(-dir.y);
 
                 // tracing point
                 const float4 data = heightMapTracing(ori, dir);
                 clip(data.w);
-
-                float depth = SampleSceneDepth(uv);
+                
+                #if UNITY_REVERSED_Z
+                    float depth = SampleSceneDepth(uv);
+                #else
+                    // Adjust Z to match NDC for OpenGL ([-1, 1])
+                    float depth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SampleSceneDepth(uv));
+                #endif
+                
                 float3 worldPos = ComputeWorldSpacePosition(uv, depth, UNITY_MATRIX_I_VP);
+                // return float3(worldPos);
                 // ray
 
                 const float3 objDis = worldPos - ori;
@@ -309,7 +320,7 @@ Shader "KM/Seascape"
             }
 
             // VR下不要启用抗锯齿，GPU寄存器不够
-             #define AA
+             //#define AA
 
             half4 frag(Varyings input):SV_Target
             {
@@ -332,7 +343,7 @@ Shader "KM/Seascape"
                 float3 color = getPixel(screen_pos);
                 #endif
                 // post
-                return float4(pow(clamp(color, 0, 1), 0.65), 1.0);
+                return float4(color, 1.0);
             }
             ENDHLSL
         }

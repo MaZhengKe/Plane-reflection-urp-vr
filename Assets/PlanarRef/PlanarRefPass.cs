@@ -1,10 +1,8 @@
 ﻿using System.Collections.Generic;
 using UnityEditor;
-using UnityEditor.ShaderGraph.Internal;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-using UnityEngine.XR;
 using UnityTemplateProjects;
 
 namespace PlanarRef
@@ -54,12 +52,14 @@ namespace PlanarRef
             var cameraTargetDescriptor = cameraData.cameraTargetDescriptor;
             RenderTextureDescriptor descriptor = cameraTargetDescriptor;
             m_MirrorDescriptor = descriptor;
-
+            
+            #if UNITY_EDITOR
             if (cameraData.camera.name.Contains("SceneCamera"))
             {
                 m_MirrorDescriptor.width = SceneView.lastActiveSceneView.camera.pixelWidth;
                 m_MirrorDescriptor.height = SceneView.lastActiveSceneView.camera.pixelHeight;
             }
+            #endif
 
             cmd.GetTemporaryRT(s_MirrorTextureID, m_MirrorDescriptor, FilterMode.Bilinear);
         }

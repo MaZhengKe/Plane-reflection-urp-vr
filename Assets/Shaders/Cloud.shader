@@ -205,7 +205,10 @@ Shader "KM/Cloud"
             {
                 float2 screen01Pos = screen_pos / _ScreenParams;
                 float2 screen11pos = (screen01Pos - 0.5) * 2;
-                screen11pos.y *= -1;
+                
+                #ifdef  UNITY_UV_STARTS_AT_TOP
+                screen11pos.y*=-1;
+                #endif
                 float4 Hs = float4(screen11pos, 0.5, 1);
                 float3 viewDir = mul(UNITY_MATRIX_I_P, Hs).xyz;
 

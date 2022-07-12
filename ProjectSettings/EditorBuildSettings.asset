@@ -6,8 +6,8 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/SampleScene.unity
-    guid: d1c3109bdb54ad54c8a2b2838528e640
+    path: Assets/Scenes/WaterScene.unity
+    guid: 3e3a968af496e2c4c93d5ca32b79b7b8
   m_configObjects:
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 263f2d06d5054f5478da8666e84015c8, type: 2}
     com.unity.xr.openxr.settings4: {fileID: 11400000, guid: df80be4248cf2434f808bfc3ee630fc5, type: 2}
