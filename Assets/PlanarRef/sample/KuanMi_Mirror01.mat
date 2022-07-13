@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: KuanMi_Mirror01
-  m_Shader: {fileID: 4800000, guid: 2b1750bbb05d78541ba680b1fb933369, type: 3}
+  m_Shader: {fileID: 4800000, guid: 179e8f72703237e4aa471b43d3d9e6c9, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -22,7 +22,11 @@ Material:
   m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
-    m_TexEnvs: []
+    m_TexEnvs:
+    - _MirrorTex:
+        m_Texture: {fileID: 8400000, guid: bfae24b6520a49541b26aae2bd993e4d, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats: []
     m_Colors: []

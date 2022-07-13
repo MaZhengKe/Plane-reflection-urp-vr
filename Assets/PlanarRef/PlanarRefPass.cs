@@ -34,17 +34,16 @@ namespace PlanarRef
         {
             m_mirrorPlanar = mirrorPlanar;
             
-            m_ProfilingSampler = new ProfilingSampler($"PlanarRef {mirrorPlanar.textureName}");
+            m_ProfilingSampler = new ProfilingSampler($"PlanarRef {mirrorPlanar.renderTexture.name}");
 
             m_ShaderTagIdList.Add(new ShaderTagId("SRPDefaultUnlit"));
             m_ShaderTagIdList.Add(new ShaderTagId("UniversalForward"));
             m_ShaderTagIdList.Add(new ShaderTagId("UniversalForwardOnly"));
 
-
+            
             m_FilteringSettings = new FilteringSettings(RenderQueueRange.opaque, layerMask);
 
-            m_MirrorTexture = RTHandles.Alloc(new RenderTargetIdentifier(m_mirrorPlanar.s_MirrorTextureID));
-            
+            m_MirrorTexture = RTHandles.Alloc(mirrorPlanar.renderTexture);
         }
 
         public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
@@ -62,8 +61,6 @@ namespace PlanarRef
                 m_MirrorDescriptor.height = SceneView.lastActiveSceneView.camera.pixelHeight;
             }
             #endif
-
-            cmd.GetTemporaryRT(m_mirrorPlanar.s_MirrorTextureID, m_MirrorDescriptor, FilterMode.Bilinear);
         }
 
         private Matrix4x4 CalculateObliqueMatrix(Vector4 worldSpacePlane, Matrix4x4 viewMatrix, Matrix4x4 projectionMatrix)
@@ -104,7 +101,7 @@ namespace PlanarRef
             var cmd = CommandBufferPool.Get();
             using (new ProfilingScope(cmd, m_ProfilingSampler))
             {
-                CoreUtils.SetRenderTarget(cmd, m_MirrorTexture, ClearFlag.All, Color.clear);
+                CoreUtils.SetRenderTarget(cmd, m_MirrorTexture, ClearFlag.Depth);
 
                 // var isSceneCamera = camera.name.Contains("SceneCamera");
 
@@ -167,7 +164,6 @@ namespace PlanarRef
                 if(m_feature.drawSkybox)
                     context.DrawSkybox(cameraData.camera);
 
-                cmd.SetGlobalTexture(m_mirrorPlanar.s_MirrorTextureID, m_MirrorTexture.nameID);
                 var viewMatrix = camera.worldToCameraMatrix;
                 RenderingUtils.SetViewAndProjectionMatrices(cmd, viewMatrix, cameraData.GetGPUProjectionMatrix(), true);
                 
@@ -198,11 +194,6 @@ namespace PlanarRef
 
         public override void OnCameraCleanup(CommandBuffer cmd)
         {
-        }
-
-        public void Dispose()
-        {
-            m_MirrorTexture.Release();
         }
     }
 }

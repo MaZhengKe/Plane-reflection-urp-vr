@@ -3,6 +3,8 @@ Shader "KM/Seascape"
     Properties
     {
 
+        _MirrorTex("_MirrorTex", 2D) = "black" {}
+        
         SEA_BASE("基础颜色", Color) = (0.0,0.09,0.18,1)
         SEA_WATER_COLOR("水颜色", Color) = (0.48,0.54,0.36,1)
 

@@ -1,7 +1,11 @@
 Shader "KuanMi/Mirror"
 {
 
-    Properties {}
+    Properties {
+        
+        _MirrorTex("_MirrorTex", 2D) = "black" {}
+        
+        }
     SubShader
     {
         Tags
@@ -14,7 +18,7 @@ Shader "KuanMi/Mirror"
         {
             name "MirrorPass"
             blend one zero
-            ZWrite off
+            ZWrite on
             ZTest Lequal
             Cull off
             HLSLPROGRAM

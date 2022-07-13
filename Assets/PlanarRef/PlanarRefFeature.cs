@@ -23,7 +23,7 @@ namespace PlanarRef
             Debug.Log($"created {mirrorPlanars.Count}" );
             foreach (var mirrorPlanar in mirrorPlanars)
             {
-                Debug.Log($"create pass: {mirrorPlanar.textureName}");
+                Debug.Log($"create pass: {mirrorPlanar.renderTexture}");
                  var planarRefPass = new PlanarRefPass(LayerMask,mirrorPlanar);
                  planarRefPass.renderPassEvent = RenderPassEvent.AfterRenderingOpaques;
                 m_ScriptablePassList.Add(planarRefPass);
@@ -44,11 +44,11 @@ namespace PlanarRef
 
         protected override void Dispose(bool disposing)
         {
-            foreach (var planarRefPass in m_ScriptablePassList)
-            {
-                planarRefPass?.Dispose();
-
-            }
+            // foreach (var planarRefPass in m_ScriptablePassList)
+            // {
+            //     planarRefPass?.Dispose();
+            //
+            // }
             m_ScriptablePassList.Clear();
             CoreUtils.Destroy(m_Material);
         }

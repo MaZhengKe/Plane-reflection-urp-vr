@@ -6,9 +6,7 @@ namespace UnityTemplateProjects
     [ExecuteAlways]
     public class MirrorPlanar : MonoBehaviour
     {
-        public string textureName = "_MirrorTex";
-
-        public int s_MirrorTextureID => Shader.PropertyToID(textureName);
+        public RenderTexture renderTexture;
 
         public Vector4 plane
         {
@@ -25,7 +23,10 @@ namespace UnityTemplateProjects
         /// </summary>
         void OnEnable()
         {
-            MirrorPlanarCommon.Instance.AddData(this);
+            if(renderTexture)
+                MirrorPlanarCommon.Instance.AddData(this);
+            else
+                MirrorPlanarCommon.Instance.RemoveData(this);
         }
 
         /// <summary>
@@ -34,6 +35,19 @@ namespace UnityTemplateProjects
         void OnDisable()
         {
             MirrorPlanarCommon.Instance.RemoveData(this);
+        }
+        
+        
+        void OnValidate()
+        {
+            if (isActiveAndEnabled && renderTexture != null)
+            {
+                MirrorPlanarCommon.Instance.AddData(this);
+            }
+            else
+            {
+                MirrorPlanarCommon.Instance.RemoveData(this);
+            }
         }
 
         public Matrix4x4 GetViewMat(Vector3 oldPos, Quaternion oldRot)

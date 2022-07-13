@@ -440,7 +440,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!64 &492285336
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -765,7 +765,7 @@ GameObject:
   - component: {fileID: 1255436389}
   - component: {fileID: 1255436388}
   - component: {fileID: 1255436387}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Mirror
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -784,7 +784,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bc1ec24d84fca8f48ad0d513c9a61b0c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  textureName: _MirrorTex
+  renderTexture: {fileID: 8400000, guid: c15044eb21e421241a35ccd85b86cd62, type: 2}
 --- !u!64 &1255436388
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -806,7 +806,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1255436386}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -1300,7 +1300,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1704378719
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1313,7 +1313,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bc1ec24d84fca8f48ad0d513c9a61b0c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  textureName: _MirrorTex01
+  renderTexture: {fileID: 8400000, guid: bfae24b6520a49541b26aae2bd993e4d, type: 2}
 --- !u!64 &1704378720
 MeshCollider:
   m_ObjectHideFlags: 0
