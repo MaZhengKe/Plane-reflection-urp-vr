@@ -1,5 +1,6 @@
 ﻿using System;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace UnityTemplateProjects
 {
@@ -8,6 +9,28 @@ namespace UnityTemplateProjects
     {
         public RenderTexture renderTexture;
 
+        public RTHandle m_MirrorTexture;
+
+        public ProfilingSampler profilingSampler;
+        
+        [System.Flags]
+        public enum RenderLayer
+        {
+            Mirror01 = (1 << 15),
+            Mirror02 = (1 << 16),
+            Mirror03 = (1 << 17),
+            Mirror04 = (1 << 18),
+        }
+        
+        public RenderLayer renderLayer;
+        public uint renderingLayerMask => (uint)renderLayer;
+
+        public void Init()
+        {
+            m_MirrorTexture = RTHandles.Alloc(renderTexture);
+            profilingSampler = new ProfilingSampler($"{renderTexture.name}");
+        }
+            
         public Vector4 plane
         {
             get

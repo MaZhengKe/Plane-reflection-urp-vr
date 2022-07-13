@@ -292,7 +292,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!64 &337949137
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -440,7 +440,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!64 &492285336
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -765,7 +765,7 @@ GameObject:
   - component: {fileID: 1255436389}
   - component: {fileID: 1255436388}
   - component: {fileID: 1255436387}
-  m_Layer: 7
+  m_Layer: 0
   m_Name: Mirror
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -785,6 +785,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   renderTexture: {fileID: 8400000, guid: c15044eb21e421241a35ccd85b86cd62, type: 2}
+  renderLayer: -2
 --- !u!64 &1255436388
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -1294,13 +1295,13 @@ GameObject:
   - component: {fileID: 1704378721}
   - component: {fileID: 1704378720}
   - component: {fileID: 1704378719}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Mirror (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1704378719
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1314,6 +1315,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   renderTexture: {fileID: 8400000, guid: bfae24b6520a49541b26aae2bd993e4d, type: 2}
+  renderLayer: -1
 --- !u!64 &1704378720
 MeshCollider:
   m_ObjectHideFlags: 0
