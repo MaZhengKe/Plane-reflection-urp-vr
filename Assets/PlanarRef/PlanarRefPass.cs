@@ -14,26 +14,27 @@ namespace PlanarRef
         FilteringSettings m_FilteringSettings;
         ProfilingSampler m_ProfilingSampler;
 
-        private ScriptableRenderer m_Renderer;
         private RenderTextureDescriptor m_MirrorDescriptor;
-        private Material m_Material;
 
         private RTHandle m_MirrorTexture;
-        private static readonly int s_MirrorTextureID = Shader.PropertyToID("_MirrorTex");
 
         private PlanarRefFeature m_feature;
 
+        private MirrorPlanar m_mirrorPlanar;
+
         public bool Setup(ScriptableRenderer renderer, Material material, PlanarRefFeature feature)
         {
-            m_Material = material;
-            m_Renderer = renderer;
+            // m_Material = material;
+            // m_Renderer = renderer;
             m_feature = feature;
             return true;
         }
 
-        public PlanarRefPass(LayerMask layerMask)
+        public PlanarRefPass(LayerMask layerMask,MirrorPlanar mirrorPlanar)
         {
-            m_ProfilingSampler = new ProfilingSampler("PlanarRef");
+            m_mirrorPlanar = mirrorPlanar;
+            
+            m_ProfilingSampler = new ProfilingSampler($"PlanarRef {mirrorPlanar.textureName}");
 
             m_ShaderTagIdList.Add(new ShaderTagId("SRPDefaultUnlit"));
             m_ShaderTagIdList.Add(new ShaderTagId("UniversalForward"));
@@ -42,7 +43,8 @@ namespace PlanarRef
 
             m_FilteringSettings = new FilteringSettings(RenderQueueRange.opaque, layerMask);
 
-            m_MirrorTexture = RTHandles.Alloc(new RenderTargetIdentifier(s_MirrorTextureID), "_MirrorTex");
+            m_MirrorTexture = RTHandles.Alloc(new RenderTargetIdentifier(m_mirrorPlanar.s_MirrorTextureID));
+            
         }
 
         public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
@@ -61,7 +63,7 @@ namespace PlanarRef
             }
             #endif
 
-            cmd.GetTemporaryRT(s_MirrorTextureID, m_MirrorDescriptor, FilterMode.Bilinear);
+            cmd.GetTemporaryRT(m_mirrorPlanar.s_MirrorTextureID, m_MirrorDescriptor, FilterMode.Bilinear);
         }
 
         private Matrix4x4 CalculateObliqueMatrix(Vector4 worldSpacePlane, Matrix4x4 viewMatrix, Matrix4x4 projectionMatrix)
@@ -104,29 +106,25 @@ namespace PlanarRef
             {
                 CoreUtils.SetRenderTarget(cmd, m_MirrorTexture, ClearFlag.All, Color.clear);
 
-                var isSceneCamera = camera.name.Contains("SceneCamera");
+                // var isSceneCamera = camera.name.Contains("SceneCamera");
 
                 var camTransform = camera.transform;
                 var rotation = camTransform.rotation;
 
-                CullingResults cullingResults;
-                var mirrorPos = MirrorPlanar.mirrorPos(MirrorPlanar.Plane,camTransform.position);
-                var viewM = MirrorPlanar.GetViewMat(camTransform.position, rotation);
+                var mirrorPos = m_mirrorPlanar.mirrorPos(camTransform.position);
+                var viewM = m_mirrorPlanar.GetViewMat(camTransform.position, rotation);
 
                 var projectionMatrix = camera.projectionMatrix;
 
-                var planeTr = MirrorPlanar.Plane;
-                var normal = planeTr.forward;
-                var d = -Vector3.Dot(normal, planeTr.position);
-                var plane = new Vector4(normal.x, normal.y, normal.z, d);
-                projectionMatrix = CalculateObliqueMatrix(plane,viewM,projectionMatrix);
+                var plane = m_mirrorPlanar.plane;
+                projectionMatrix = CalculateObliqueMatrix(m_mirrorPlanar.plane,viewM,projectionMatrix);
                 projectionMatrix[8] *= -1;
 
                 var cullMat = Matrix4x4.Frustum(-1, 1, -1, 1, 0.0000001f, 10000000f);
 
                 camera.cullingMatrix = cullMat * viewM;
                 camera.TryGetCullingParameters(out var cullingParameters);
-                cullingResults = context.Cull(ref cullingParameters);
+                var cullingResults = context.Cull(ref cullingParameters);
 
                 projectionMatrix = GL.GetGPUProjectionMatrix(projectionMatrix, cameraData.IsCameraProjectionMatrixFlipped());
 
@@ -135,11 +133,11 @@ namespace PlanarRef
                     var leftEyePos = camera.GetStereoViewMatrix(Camera.StereoscopicEye.Left).inverse.GetColumn(3);
                     var rightEyePos = camera.GetStereoViewMatrix(Camera.StereoscopicEye.Right).inverse.GetColumn(3);
 
-                    Vector4 leftMirrorPos = MirrorPlanar.mirrorPos(MirrorPlanar.Plane,leftEyePos);
-                    Vector4 rightMirrorPos = MirrorPlanar.mirrorPos(MirrorPlanar.Plane,rightEyePos);
+                    Vector4 leftMirrorPos = m_mirrorPlanar.mirrorPos(leftEyePos);
+                    Vector4 rightMirrorPos = m_mirrorPlanar.mirrorPos(rightEyePos);
 
-                    var leftViewM = MirrorPlanar.GetViewMat(leftEyePos, rotation);
-                    var rightViewM = MirrorPlanar.GetViewMat(rightEyePos, rotation);
+                    var leftViewM = m_mirrorPlanar.GetViewMat(leftEyePos, rotation);
+                    var rightViewM = m_mirrorPlanar.GetViewMat(rightEyePos, rotation);
 
                     var leftPMat = camera.GetStereoProjectionMatrix(Camera.StereoscopicEye.Left);
                     var rightPMat = camera.GetStereoProjectionMatrix(Camera.StereoscopicEye.Right);
@@ -153,8 +151,7 @@ namespace PlanarRef
                     rightPMat = GL.GetGPUProjectionMatrix(rightPMat, cameraData.IsCameraProjectionMatrixFlipped());
 
                     cmd.SetGlobalVectorArray(unity_StereoWorldSpaceCameraPos,new []{leftMirrorPos,rightMirrorPos});
-                    SetViewAndProjectionMatricesInVR(cmd, new[] { leftViewM, rightViewM },
-                        new[] { leftPMat, rightPMat });
+                    SetViewAndProjectionMatricesInVR(cmd, new[] { leftViewM, rightViewM }, new[] { leftPMat, rightPMat });
                 }
                 else
                 {
@@ -170,7 +167,7 @@ namespace PlanarRef
                 if(m_feature.drawSkybox)
                     context.DrawSkybox(cameraData.camera);
 
-                cmd.SetGlobalTexture(s_MirrorTextureID, m_MirrorTexture.nameID);
+                cmd.SetGlobalTexture(m_mirrorPlanar.s_MirrorTextureID, m_MirrorTexture.nameID);
                 var viewMatrix = camera.worldToCameraMatrix;
                 RenderingUtils.SetViewAndProjectionMatrices(cmd, viewMatrix, cameraData.GetGPUProjectionMatrix(), true);
                 

@@ -6,35 +6,58 @@ namespace UnityTemplateProjects
     [ExecuteAlways]
     public class MirrorPlanar : MonoBehaviour
     {
-        public static Transform Plane;
+        public string textureName = "_MirrorTex";
 
-        private void Update()
+        public int s_MirrorTextureID => Shader.PropertyToID(textureName);
+
+        public Vector4 plane
         {
-            Plane = transform;
+            get
+            {
+                var normal = transform.forward;
+                var d = -Vector3.Dot(normal, transform.position);
+                return new Vector4(normal.x, normal.y, normal.z, d);
+            }
         }
 
-        public static Matrix4x4 GetViewMat(Vector3 oldPos, Quaternion oldRot)
+            /// <summary>
+        /// Add or remove the lens flare to the queue of PostProcess
+        /// </summary>
+        void OnEnable()
         {
-            var newPos = mirrorPos(Plane, oldPos);
+            MirrorPlanarCommon.Instance.AddData(this);
+        }
+
+        /// <summary>
+        /// Remove the lens flare from the queue of PostProcess
+        /// </summary>
+        void OnDisable()
+        {
+            MirrorPlanarCommon.Instance.RemoveData(this);
+        }
+
+        public Matrix4x4 GetViewMat(Vector3 oldPos, Quaternion oldRot)
+        {
+            var newPos = mirrorPos(oldPos);
             
-            var newRot = mirrorRot(Plane, oldRot);
+            var newRot = mirrorRot(oldRot);
 
             return Matrix4x4.TRS(newPos, newRot, new Vector3(1, 1, -1)).inverse;
         }
 
-        public static Quaternion mirrorRot(Transform plane, Quaternion cam)
+        public Quaternion mirrorRot( Quaternion cam)
         {
-            var forward = plane.forward;
+            var forward = transform.forward;
             var reflect = Vector3.Reflect(cam * Vector3.forward, forward);
             var reflectup = Vector3.Reflect(cam * Vector3.up, forward);
 
             return Quaternion.LookRotation(reflect, reflectup);
         }
 
-        public static Vector3 mirrorPos(Transform plane, Vector3 oldPos)
+        public Vector3 mirrorPos(Vector3 oldPos)
         {
-            var normal = plane.forward;
-            var d = -Vector3.Dot(normal, plane.position);
+            var normal = transform.forward;
+            var d = -Vector3.Dot(normal, transform.position);
 
             return oldPos - 2 * (Vector3.Dot(oldPos, normal) + d) * normal;
         }

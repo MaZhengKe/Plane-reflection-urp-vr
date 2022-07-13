@@ -1,4 +1,4 @@
-Shader "KuanMi/Mirror"
+Shader "KuanMi/Mirror01"
 {
 
     Properties {}
@@ -24,8 +24,8 @@ Shader "KuanMi/Mirror"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
 
-            TEXTURE2D_X(_MirrorTex);
-            SAMPLER(sampler_MirrorTex);
+            TEXTURE2D_X(_MirrorTex01);
+            SAMPLER(sampler_MirrorTex01);
 
 
             struct Attributes
@@ -60,7 +60,7 @@ Shader "KuanMi/Mirror"
 
                 screenUV.x = 1 - screenUV.x;
                 
-                return SAMPLE_TEXTURE2D_X(_MirrorTex, sampler_MirrorTex, screenUV) * 0.8;
+                return SAMPLE_TEXTURE2D_X(_MirrorTex01, sampler_MirrorTex01, screenUV) * 0.8;
 
                 return 1;
             }
